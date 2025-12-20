@@ -1,4 +1,3 @@
-
 import java.io.*;
 
 public class Main {
@@ -39,7 +38,8 @@ public class Main {
                     use = dosya1;
                 } else {
                     use = dosya2;
-                }
+                } if (!use.exists()) continue;
+
 
 
                 br = new BufferedReader(new FileReader(use));
@@ -103,4 +103,223 @@ public class Main {
         return total;
 
     }
+
+
+    public static int commodityProfitInRange(String commodity, int fromDay, int toDay) {  // Belirtilen commodity için yıl boyunca verilen gün aralığındaki toplam kârı hesaplar
+
+        int cIdx = commodityIndex(commodity); // Commodity adını dizideki index’ine çevirir
+        if (cIdx < 0) return -99999;// Commodity geçersizse hata kodu döndürür
+        if (fromDay < 1 || fromDay > DAYS || toDay < 1 || toDay > DAYS) return -99999; // Gün aralığı geçersizse hata kodu döndürür
+        if (fromDay > toDay) return -99999; // Başlangıç günü bitiş gününden büyükse hata döndürür
+
+
+        int sum = 0;
+        for (int ay = 0; ay < MONTHS; ay++) {
+            for (int gun = fromDay - 1; gun <= toDay - 1; gun++) {
+                sum += data[ay][gun][cIdx];
+            }
+        }
+        return sum;
+    }
+
+
+    public static int bestDayOfMonth(int month) {  // Verilen ayda toplam kârı en yüksek olan günü bulur
+
+        if (!validMonth(month)) return -1;
+
+        int bestGun = 1;
+        int bestTotal = Integer.MIN_VALUE; // Karşılaştırma için en küçük olası toplam kâr değeri
+
+
+        for (int gun = 1; gun <= DAYS; gun++) {
+            int total = totalProfitOnDay(month, gun);
+            if (total > bestTotal) {
+                bestTotal = total;
+                bestGun = gun;
+            }
+        }
+        return bestGun;
+    }
+
+
+    public static String bestMonthForCommodity(String commodity) {  // Verilen commodity için en yüksek toplam kârın olduğu ayı bulur
+
+        int cIdx = commodityIndex(commodity); // Commodity adını commodities dizisindeki indexe çevirir
+
+        if (cIdx < 0) return "INVALID_COMMODITY"; // Commodity geçersizse hata kodu
+
+
+        int bestAy = 0; // En kârlı ayın indexi  (başlangıçta 0 = January)
+
+        int bestSum = Integer.MIN_VALUE;
+
+        for (int ay = 0; ay < MONTHS; ay++) {
+            int sum = 0;
+            for (int gun = 0; gun < DAYS; gun++) {
+                sum += data[ay][gun][cIdx];
+
+                // Bu ayda seçilen commodity’nin toplam kârını tutar
+
+            }
+            if (sum > bestSum) {
+                bestSum = sum;
+                bestAy = ay;
+            }
+        }
+        return months[bestAy];
+    }
+
+
+    public static int consecutiveLossDays(String commodity) {   // Seçilen commodity için yıl boyunca arka arkaya gelen en uzun zarar günlerini bulur
+
+        int cIdx = commodityIndex(commodity);
+        if (cIdx < 0) return -1;      // Commodity geçersizse hata kodu
+
+
+        int best = 0; // Şu ana kadar bulunan en uzun zarar sırası
+
+        int anlik = 0; // O anki devam eden zarar günleri sayısı
+
+
+        for (int ay = 0; ay < MONTHS; ay++) {
+            for (int gun = 0; gun < DAYS; gun++) {
+                if (data[ay][gun][cIdx] < 0) {
+                    anlik++;
+                    //  Ayları ve günleri sırayla dolaşıp devam eden zarar günü sayısını artırır
+
+                    if (anlik > best) best = anlik;
+                } else {
+                    anlik = 0;
+                }
+            }
+        }
+        return best;
+    }
+
+
+    public static int daysAboveThreshold(String commodity, int threshold) {  // Commodity’nin yıl boyunca threshold değerini aşan günlerini sayan metot
+
+        int cIdx = commodityIndex(commodity);
+        if (cIdx < 0) return -1;     // Commodity geçersizse hata kodu
+
+
+        int sayi = 0; // Thresholdu aşan gün sayısını
+
+        for (int ay = 0; ay < MONTHS; ay++) {
+            for (int gun = 0; gun < DAYS; gun++) {
+                if (data[ay][gun][cIdx] > threshold) sayi++;     // Kâr thresholddan büyükse gün sayısını artırır
+
+            }
+        }
+        return sayi;
+    }
+
+
+    public static int biggestDailySwing(int month) {  // Ay içindeki günler arasında en büyük günlük dalgalanmayı hesaplayan metot
+
+        if (!validMonth(month)) return -99999;      // Ay geçersizse hata kodu
+
+
+        int best = 0; // Şu ana kadar bulunan en büyük günlük fark
+
+        int prev = totalProfitOnDay(month, 1);   // İlk günün toplam kârını referans olarak alır
+
+
+        for (int gun = 2; gun <= DAYS; gun++) {
+            int anlik = totalProfitOnDay(month, gun);
+            int fark = anlik - prev; // Mevcut gün ile bir önceki gün arasındaki fark
+
+            if (fark < 0) fark = -fark; // Fark negatifse mutlak değere çevirir
+
+            if (fark > best) best = fark;
+            prev = anlik;
+        }
+        return best;
+    }
+
+    public static String compareTwoCommodities(String c1, String c2) { // İki commodity’yi karşılaştırıp hangisinin daha kârlı olduğunu döndüren metot
+
+        int i1 = commodityIndex(c1);
+        int i2 = commodityIndex(c2);
+        if (i1 < 0 || i2 < 0) return "INVALID_COMMODITY";
+
+        int s1 = totalYearProfit(i1);  // İlk commoditynin yıl boyunca toplam kârını hesaplar
+
+        int s2 = totalYearProfit(i2);
+
+        if (s1 == s2) return "Equal"; // İki commoditynin toplam kârı eşitse Equal döndürür
+
+        if (s1 > s2) return c1 + " is better by " + (s1 - s2); // İlk commodity daha kârlıysa farkla birlikte sonucu döndürür
+
+        return c2 + " is better by " + (s2 - s1);
+    }
+
+
+    public static String bestWeekOfMonth(int month) { // Ay içindeki haftaları karşılaştırarak en kârlı haftayı döndüren metot
+
+        if (!validMonth(month)) return "INVALID_MONTH";
+
+        int bestHafta = 1;
+        int bestSum = Integer.MIN_VALUE; // Karşılaştırma için en küçük olası toplam kâr değeri
+
+
+        for (int hafta = 1; hafta <= 4; hafta++) {
+            int startDay = (hafta - 1) * 7 + 1;
+            int endDay = hafta * 7;
+
+            int sum = 0;
+            for (int gun = startDay; gun <= endDay; gun++) {
+                sum += totalProfitOnDay(month, gun);
+            }
+
+            if (sum > bestSum) {
+                bestSum = sum;
+                bestHafta = hafta;
+            }
+        }
+        return "Week " + bestHafta;
+    }
+
+
+    private static boolean validMonth(int month) {  // Verilen ay index’inin geçerli olup olmadığını kontrol eder
+
+        return month >= 0 && month < MONTHS;
+    }
+
+    private static int commodityIndex(String commodity) { // Commodity adını commodities dizisinde arayıp indexini döndürür yoksa -1 verir
+
+        if (commodity == null) return -1;
+        for (int i = 0; i < COMMS; i++) {
+            if (commodities[i].equals(commodity)) return i;
+        }
+        return -1;
+    }
+
+    private static int totalYearProfit(int commodityIdx) {   // Verilen commoditynin yıl boyunca tüm günlerdeki toplam kârını hesaplar
+
+        int sum = 0;
+        for (int ay = 0; ay < MONTHS; ay++) {
+            for (int gun = 0; gun < DAYS; gun++) {
+                sum += data[ay][gun][commodityIdx];
+            }
+        }
+        return sum;
+    }
+
+    private static int parseIntSafe(String s, int defaultVal) {  // Stringi integera çevirir hata olursa programı bozmadan varsayılan değeri döndürür
+
+        try {
+            return Integer.parseInt(s.trim());
+        } catch (Exception e) {
+            return defaultVal;
+        }
+    }
+
+    public static void main(String[] args) { // Programı başlatıp  veri yükleme işlemini yapar
+
+        loadData();
+        // System.out.println("Data loaded - ready for queries");
+    }
+}
+
 
